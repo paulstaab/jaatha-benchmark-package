@@ -50,11 +50,11 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
         c('init.user','init.system','init.elapsed','ref.user','ref.system','ref.elapsed')
 
       runtimes[1:3] <- system.time(
-        jaatha <- Jaatha.initialSearch(jaatha, 500, 2)
+        jaatha <- Jaatha.initialSearch(jaatha)
       )
 
       runtimes[4:6] <- system.time(
-        jaatha <- Jaatha.refinedSearch(jaatha, 2, sim=200, epsilon=.5)
+        jaatha <- Jaatha.refinedSearch(jaatha, 2)
       )
       estimates <-  Jaatha.getLikelihoods(jaatha)[1,-(1:2)]
       sink(NULL)
