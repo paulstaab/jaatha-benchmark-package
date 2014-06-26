@@ -36,8 +36,7 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
         jsfs <- dm.simSumStats(jaatha:::dm.addSummaryStatistic(dm, 'seg.sites'), par.grid[i, ])
         jaatha <- Jaatha.initialize(dm, jsfs=jsfs, 
                                     cores=cores[2],
-                                    smoothing=smoothing, 
-                                    seg.sites=jsfs$seg.sites)
+                                    smoothing=smoothing)
       } else {
         jsfs <- dm.simSumStats(dm, par.grid[i, ])
         jaatha <- Jaatha.initialize(dm, jsfs=jsfs, 
