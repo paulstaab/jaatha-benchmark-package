@@ -32,32 +32,41 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
       cat("Run",i,"of",n,"\n")
       cat("Real parameters:",par.grid[i,],"\n")
       cat("----------------------------------------------------------------------\n")
-      if (fpc) {
-        jsfs <- dm.simSumStats(jaatha:::dm.addSummaryStatistic(dm, 'seg.sites'), par.grid[i, ])
-        jaatha <- Jaatha.initialize(dm, jsfs=jsfs, 
-                                    cores=cores[2],
-                                    smoothing=smoothing)
-      } else {
-        jsfs <- dm.simSumStats(dm, par.grid[i, ])
-        jaatha <- Jaatha.initialize(dm, jsfs=jsfs, 
-                                    cores=cores[2],
-                                    smoothing=smoothing)
-      }
+      tryCatch({
+        if (fpc) {
+          jsfs <- dm.simSumStats(jaatha:::dm.addSummaryStatistic(dm, 'seg.sites'), par.grid[i, ])
+          jaatha <- Jaatha.initialize(dm, jsfs=jsfs, 
+                                      cores=cores[2],
+                                      smoothing=smoothing)
+        } else {
+          jsfs <- dm.simSumStats(dm, par.grid[i, ])
+          jaatha <- Jaatha.initialize(dm, jsfs=jsfs, 
+                                      cores=cores[2],
+                                      smoothing=smoothing)
+        }
+        save(jaatha, file=paste(folder.logs, "/run_", i, ".Rda", sep=""))
 
-      runtimes <- rep(0, 6)
-      names(runtimes) <-
-        c('init.user','init.system','init.elapsed','ref.user','ref.system','ref.elapsed')
+        runtimes <- rep(0, 6)
+        names(runtimes) <-
+          c('init.user','init.system','init.elapsed','ref.user','ref.system','ref.elapsed')
 
-      runtimes[1:3] <- system.time(
-        jaatha <- Jaatha.initialSearch(jaatha)
-      )
+        runtimes[1:3] <- system.time(
+          jaatha <- Jaatha.initialSearch(jaatha)
+        )
+        save(jaatha, file=paste(folder.logs, "/run_", i, ".Rda", sep=""))
 
-      runtimes[4:6] <- system.time(
-        jaatha <- Jaatha.refinedSearch(jaatha, 2)
-      )
-      estimates <-  Jaatha.getLikelihoods(jaatha)[1,-(1:2)]
-      sink(NULL)
-      return(c(runtimes, estimates))
+        runtimes[4:6] <- system.time(
+          jaatha <- Jaatha.refinedSearch(jaatha, 2)
+        )
+        save(jaatha, file=paste(folder.logs, "/run_", i, ".Rda", sep=""))
+        estimates <-  Jaatha.getLikelihoods(jaatha)[1,-(1:2)]
+        return(c(runtimes, estimates))
+      }, error = function(e) {
+        sink(NULL)
+        cat("Error in run", i, ":\n")
+        print(e)
+        traceback() 
+      }, finally = sink(NULL))
   }
 
   estimates <- results[, -(1:6)]
