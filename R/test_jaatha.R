@@ -1,6 +1,7 @@
 #' @export
 testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE, 
-                       cores=c(8,4), folder=".", fpc=FALSE) {
+                       cores=c(16,2), folder=".", fpc=FALSE) {
+  
   # Set up directories
   folder.results <- paste(folder, "results", sep="/")
   folder.logs  <- paste(folder, "logs", sep="/")
@@ -10,18 +11,20 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
   dir.create(folder.results, recursive=T)
   dir.create(folder.logs, recursive=T)
   
-  envir <- c(jaatha.version=as.character(packageVersion("jaatha")),
+  envir <- c(folder=folder,
+             jaatha.version=as.character(packageVersion("jaatha")),
              test_jaatha.version=as.character(packageVersion("testJaatha")),
              hostname=Sys.info()["nodename"],
              seed=seed)
   print(envir)
   write.table(envir, file=paste0(folder.logs, "/envir.txt"), col.names=F)
 
-  set.seed(seed)
+  
   par.grid <- createParGrid(dm, n.points, reps)
   n <- dim(par.grid)[1]
-  seeds <- sample.int(2^20, n)
-
+  set.seed(seed)
+  seeds <- sample.int(2^32, n)
+  
   registerDoMC(cores[1])
 
   results <- foreach(i=1:n, .combine=rbind) %dopar% { 
@@ -62,10 +65,10 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
         estimates <-  Jaatha.getLikelihoods(jaatha)[1,-(1:2)]
         return(c(runtimes, estimates))
       }, error = function(e) {
+        cat("Error!", file=paste(folder.logs, "/run_", i, ".txt", sep=""), append=TRUE)
         sink(NULL)
         cat("Error in run", i, ":\n")
         print(e)
-        traceback() 
       }, finally = sink(NULL))
   }
 
