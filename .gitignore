@@ -8,3 +8,6 @@
 *.tar.gz
 
 .Rproj.user
+..Rcheck
+.RData
+man
