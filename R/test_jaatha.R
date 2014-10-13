@@ -1,6 +1,19 @@
+#' Excutes Jaathas self test
 #' @export
+#' @examples
+#' library('jaatha')
+#' dm <- dm.createThetaTauModel(10:11, 100)
+#' testJaatha(dm, 2, 1, cores=c(1,1), folder=tempfile())
+#' 
+#' test_data <- createTestData(dm, 2, 1)
+#' testJaatha(dm, test_data = test_data, cores=c(1,1), folder=tempfile())
 testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE, 
-                       cores=c(16,2), folder=".", fpc=FALSE, grid.pars='all') {
+                       cores=c(16,2), folder=".", grid.pars='all', 
+                       test_data=NULL) {
+  
+  # Setup parallization backend
+  registerDoMC(cores[1])
+  mc.opt <- list(preschedule=FALSE, set.seed=FALSE)
   
   # Set up directories
   folder.results <- paste(folder, "results", sep="/")
@@ -11,6 +24,17 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
   dir.create(folder.results, recursive=T)
   dir.create(folder.logs, recursive=T)
   
+  # Create test data sets if not provided
+  if (is.null(test_data)) {
+    set.seed(seed+1)
+    test_data <- createTestData(dm, n.points, reps, grid.pars)
+    save(test_data, file = paste(folder.results, 'test_datasets.Rda' , sep="/"))
+  }
+  
+  # Sample seeds for each run
+  set.seed(seed)
+  seeds <- sample.int(2^20, nrow(test_data$par_grid))
+  
   # Write some information about this run to disk
   envir <- c(folder=folder,
              jaatha.version=as.character(packageVersion("jaatha")),
@@ -20,18 +44,10 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
   print(envir)
   write.table(envir, file=paste0(folder.logs, "/envir.txt"), col.names=F)
   
-  # Create the parameter grid for true values
-  par.grid <- createParGrid(dm, n.points, reps, grid.pars)
-  n <- dim(par.grid)[1]
-  set.seed(seed)
-  seeds <- sample.int(2^20, n)
-  
-  # Setup parallization backend
-  registerDoMC(cores[1])
-  mc.opt <- list(preschedule=FALSE, set.seed=FALSE)
-  
+  n <- nrow(test_data$par_grid)
   # The actual simulation
   results <- foreach(i=1:n, .combine=rbind, .options.multicore=mc.opt) %dopar% { 
+                       
     cat("Run",i,"of",n,"\n")
     log <- file(paste(folder.logs, "/run_", i, ".txt", sep=""))
     sink(log)
@@ -39,20 +55,12 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
     set.seed(seeds[i])
     cat("----------------------------------------------------------------------\n")
     cat("Run",i,"of",n,"\n")
-    cat("Real parameters:",par.grid[i,],"\n")
+    cat("Real parameters:",test_data$par_grid[i,],"\n")
     cat("----------------------------------------------------------------------\n")
     tryCatch({
-      if (fpc) {
-        jsfs <- dm.simSumStats(jaatha:::dm.addSummaryStatistic(dm, 'seg.sites'), par.grid[i, ])
-        jaatha <- Jaatha.initialize(dm, jsfs=jsfs, 
-                                    cores=cores[2],
-                                    smoothing=smoothing)
-      } else {
-        jsfs <- dm.simSumStats(dm, par.grid[i, ])
-        jaatha <- Jaatha.initialize(dm, jsfs=jsfs, 
-                                    cores=cores[2],
-                                    smoothing=smoothing)
-      }
+      jaatha <- Jaatha.initialize(dm, test_data$data[[i]], 
+                                  cores=cores[2],
+                                  smoothing=smoothing)
       save(jaatha, file=paste(folder.logs, "/run_", i, ".Rda", sep=""))
       
       runtimes <- rep(0, 6)
@@ -87,9 +95,31 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
   runtimes <- results[, 1:6]
   
   write.table(estimates, file=paste(folder.results, "estimates.txt", sep="/"), row.names=F)
-  write.table(par.grid,  file=paste(folder.results, "true_values.txt", sep="/"), row.names=F)
+  write.table(test_data$par_grid,  file=paste(folder.results, "true_values.txt", sep="/"), row.names=F)
   write.table(runtimes,  file=paste(folder.results, "runtimes.txt", sep="/"), row.names=F)
 }
+
+#' Creates test datasets
+#' 
+#' @export
+#' @examples
+#' library('jaatha')
+#' dm <- dm.createThetaTauModel(10:11, 100)
+#' createTestData(dm, 2, 2)
+createTestData <- function(dm, n.points=2, reps=1, grid.pars='all') {
+  test_data <- list()
+  
+  # Create the parameter grid for true values
+  test_data$par_grid <- createParGrid(dm, n.points, reps, grid.pars)
+  
+  # Simulate test data sets
+  test_data$data <- apply(test_data$par_grid, 1, function (x) {
+    dm.simSumStats(dm.addSummaryStatistic(dm, 'seg.sites'), x)
+  })
+
+  test_data
+}
+  
 
 createParGrid <- function(dm, n.points, reps, grid.pars='all'){
   par.ranges <- jaatha:::dm.getParRanges(dm)
