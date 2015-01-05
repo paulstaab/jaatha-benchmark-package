@@ -11,4 +11,5 @@
 #' @importFrom foreach %do% 
 #' @importFrom foreach %dopar% 
 #' @importFrom doMC registerDoMC
+#' @importFrom parallel mclapply
 NULL
