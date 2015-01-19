@@ -1,15 +1,27 @@
 #' Excutes Jaathas self test
+#' @param seed The Random Seed to use.
+#' @param cores The number of cores to use. This is a numeric vector of length
+#'   two, where the first entry is the number of Jaatha runs execute in parallel,
+#'   and the second is the number of cores that are used in each run.
+#' @param folder The folder where the simulation results are saved. Must not exists
+#'   when calling the function.
+#' @param test_data If specified, use the test data generated with 
+#'   \code{\link{createTestData}} instead of generating it in the beginning.
+#'   The arguments \code{n.points} and \code{reps} are ignored then.
+#' @param Additional argument for \code{Jaatha.initialize}.
+#' @inheritParams createTestData
+#' 
+#' @return Nothing.
 #' @export
 #' @examples
 #' library('jaatha')
-#' dm <- dm.createThetaTauModel(10:11, 100)
-#' testJaatha(dm, 2, 1, cores=c(1,2), folder=tempfile())
+#' dm <- dm.createThetaTauModel(5:6, 100, 100)
+#' testJaatha(dm, 2, 1, cores=c(2,1), folder=tempfile(), scaling.factor=10)
 #' 
 #' test_data <- createTestData(dm, 2, 1)
-#' testJaatha(dm, test_data = test_data, cores=c(1,2), folder=tempfile())
-testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE, 
-                       cores=c(16,2), folder=".", grid.pars='all', 
-                       test_data=NULL, scaling_factor=1) {
+#' testJaatha(dm, test_data = test_data, cores=c(1,1), folder=tempfile())
+testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2), 
+                       folder=".", grid.pars='all', test_data=NULL, ...) {
   
   # Setup parallization backend
   mc.opt <- list(preschedule=FALSE, set.seed=FALSE)
@@ -61,8 +73,7 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
       jaatha <- Jaatha.initialize(data = test_data$data[[i]], 
                                   model = dm,
                                   cores = cores[2],
-                                  smoothing = smoothing,
-                                  scaling.factor =  scaling_factor)
+                                  ...)
       save(jaatha, file=paste(folder.logs, "/run_", i, ".Rda", sep=""))
       
       runtimes <- rep(0, 6)
@@ -103,17 +114,25 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, smoothing=FALSE,
 
 #' Creates test datasets
 #' 
+#' @param dm The demographic model to test
+#' @param n.points The number of test points for each parameter.
+#' @param reps The number of repetitions of each parameter combination
+#' @param grid.pars The index of parameter that are used for builing the grid
+#'   of true values. Use 'all' (default) for all parameters.
+#' @param cores The number of cores on which the simulations are distributed.
+#' 
+#' @importFrom jaatha dm.simSumStats
+#' 
 #' @export
 #' @examples
 #' library('jaatha')
 #' dm <- dm.createThetaTauModel(10:11, 100)
-#' dm <- dm.addSummaryStatistic(dm, 'fpc')
 #' test_data <- createTestData(dm, 2, 2)
 createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
   test_data <- list()
   
   # Set Summary Statistics to JSFS + seg.sites
-  dm@sum.stats <- dm.createDemographicModel(5:6, 100)@sum.stats
+  jaatha:::resetSumStats(dm)
   dm <- dm.addSummaryStatistic(dm, 'seg.sites')
   
   # Create the parameter grid for true values
@@ -123,7 +142,7 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
   seeds <- sample(10000000, nrow(test_data$par_grid))
   test_data$data <- mclapply(1:nrow(test_data$par_grid), function(x) {
     set.seed(seeds[x])
-    dm.simSumStats(dm.addSummaryStatistic(dm, 'seg.sites'), test_data$par_grid[x,])
+    dm.simSumStats(dm, test_data$par_grid[x,])
   }, mc.cores=cores, mc.preschedule=FALSE, mc.set.seed=FALSE)
 
   test_data
