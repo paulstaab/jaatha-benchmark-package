@@ -1,2 +1,9 @@
+^NEWS.md$
+^Makefile$
+^howtos$
+^misc$
+.tar.gz$
+^.travis*
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^\.travis\.yml$
