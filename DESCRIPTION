@@ -11,6 +11,7 @@ Imports:
     foreach,
     doMC,
     parallel,
-    jaatha (>= 2.99.0)
+    jaatha (>= 2.99.0.9018),
+    coalsimr
 Depends:
     R (>= 3.1.0)

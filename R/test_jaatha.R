@@ -12,14 +12,17 @@
 #' @inheritParams createTestData
 #' 
 #' @return Nothing.
+#' @importFrom jaatha Jaatha.initialize Jaatha.initialSearch 
+#' @importFrom jaatha Jaatha.refinedSearch Jaatha.getLikelihoods
 #' @export
 #' @examples
 #' library('jaatha')
 #' dm <- coalsimr:::model_theta_tau()
 #' testJaatha(dm, 2, 1, cores=c(2,1), folder=tempfile(), scaling.factor=10)
 #' 
-#' test_data <- createTestData(dm, 2, 1)
+#' test_data <- createTestData(dm, 2, 1, grid.pars=1)
 #' testJaatha(dm, test_data = test_data, cores=c(1,1), folder=tempfile())
+#' 
 testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2), 
                        folder=".", grid.pars='all', test_data=NULL, ...) {
   
@@ -121,8 +124,6 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
 #'   of true values. Use 'all' (default) for all parameters.
 #' @param cores The number of cores on which the simulations are distributed.
 #' 
-#' @importFrom jaatha dm.simSumStats
-#' 
 #' @export
 #' @examples
 #' library('jaatha')
@@ -146,7 +147,7 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
   test_data
 }
 
-
+#' @importFrom coalsimr get_parameter_table sumstat_seg_sites
 createParGrid <- function(dm, n.points, reps, grid.pars='all'){
   par.ranges <- get_parameter_table(dm)
   n.dim <- nrow(par.ranges)
