@@ -20,7 +20,7 @@
 #' dm <- coalsimr:::model_theta_tau()
 #' testJaatha(dm, 2, 1, cores=c(2,1), folder=tempfile(), scaling.factor=10)
 #' 
-#' test_data <- createTestData(dm, 2, 1, grid.pars=1)
+#' test_data <- createTestData(dm, 2, 1, grid.pars=2)
 #' testJaatha(dm, test_data = test_data, cores=c(1,1), folder=tempfile())
 #' 
 testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2), 
@@ -147,31 +147,42 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
   test_data
 }
 
+#' Create a parameter grid
+#' 
 #' @importFrom coalsimr get_parameter_table sumstat_seg_sites
+#' @examples
+#' dm <- coalsimr:::model_theta_tau()
+#' test_data <- createTestData(dm, 2, 1)
+#' test_data <- createTestData(dm, 2, 1, grid.pars=1)
+#' test_data <- createTestData(dm, 2, 1, grid.pars=2)
+#' test_data <- createTestData(dm, 2, 1, grid.pars=1:2)
 createParGrid <- function(dm, n.points, reps, grid.pars='all'){
-  par.ranges <- get_parameter_table(dm)
+  par.ranges <- get_parameter_table(dm)[,2:3]
+  rownames(par.ranges)  <- get_parameter_table(dm)[,1]
   n.dim <- nrow(par.ranges)
   
   if (any(grid.pars != 'all')) {
-    grid.pars.mask = 1:n.dim %in%grid.pars
-    par.ranges = par.ranges[grid.pars.mask,]
+    grid.par.mask = 1:n.dim %in% grid.pars
+  } else {
+    grid.par.mask = rep(TRUE, n.dim)
   }
   
-  par.values <- data.frame(apply(par.ranges, 1, function(x) {
-    seq(as.numeric(x[2]), as.numeric(x[3]),
-               length=n.points+2)[-c(1,n.points+2)]
+  par.values <- data.frame(apply(par.ranges[grid.par.mask, , drop=FALSE], 1, function(x) {
+    seq(x[1], x[2], length=n.points+2)[-c(1,n.points+2)]
   }))
-  
+
+  # Create the grid
   par.grid <- expand.grid(par.values)
   
+  # Add middle values for the non-grid parameters
   if (any(grid.pars != 'all')) {
-    non.grid.pars <- t(as.matrix(apply(get_parameter_table(dm)[!grid.pars.mask,], 1, function(x) {
-      mean(as.numeric(x[2:3]))
+    non.grid.pars <- t(as.matrix(apply(par.ranges[!grid.par.mask,], 1, function(x) {
+      mean(as.numeric(x[1:2]))
     })))
     par.grid = cbind(par.grid, non.grid.pars)
+    par.grid = par.grid[ , rownames(par.ranges)] # Sort again
   }
   
-  par.grid <- apply(par.grid, 2, rep, reps)
-  colnames(par.grid) <- get_parameter_table(dm)[,1]
-  par.grid
+  # And repeat
+  apply(par.grid, 2, rep, reps)
 }
