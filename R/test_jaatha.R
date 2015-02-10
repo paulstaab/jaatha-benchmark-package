@@ -15,7 +15,7 @@
 #' @export
 #' @examples
 #' library('jaatha')
-#' dm <- dm.createThetaTauModel(5:6, 100, 100)
+#' dm <- coalsimr:::model_theta_tau()
 #' testJaatha(dm, 2, 1, cores=c(2,1), folder=tempfile(), scaling.factor=10)
 #' 
 #' test_data <- createTestData(dm, 2, 1)
@@ -126,14 +126,12 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
 #' @export
 #' @examples
 #' library('jaatha')
-#' dm <- dm.createThetaTauModel(10:11, 100)
+#' dm <- coalsimr:::model_theta_tau()
 #' test_data <- createTestData(dm, 2, 2)
 createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
   test_data <- list()
   
-  # Set Summary Statistics to JSFS + seg.sites
-  jaatha:::resetSumStats(dm)
-  dm <- dm.addSummaryStatistic(dm, 'seg.sites')
+  dm <- dm + sumstat_seg_sites()
   
   # Create the parameter grid for true values
   test_data$par_grid <- createParGrid(dm, n.points, reps, grid.pars)
@@ -142,7 +140,7 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
   seeds <- sample(10000000, nrow(test_data$par_grid))
   test_data$data <- mclapply(1:nrow(test_data$par_grid), function(x) {
     set.seed(seeds[x])
-    dm.simSumStats(dm, test_data$par_grid[x,])
+    simulate(dm, pars = test_data$par_grid[x,])
   }, mc.cores=cores, mc.preschedule=FALSE, mc.set.seed=FALSE)
 
   test_data
@@ -150,23 +148,29 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
 
 
 createParGrid <- function(dm, n.points, reps, grid.pars='all'){
-  par.ranges <- jaatha:::dm.getParRanges(dm)
-  n.dim <- length(jaatha:::dm.getParameters(dm))
+  par.ranges <- get_parameter_table(dm)
+  n.dim <- nrow(par.ranges)
   
   if (any(grid.pars != 'all')) {
     grid.pars.mask = 1:n.dim %in%grid.pars
     par.ranges = par.ranges[grid.pars.mask,]
   }
   
-  par.values <- data.frame(apply(par.ranges, 1, function(x) seq(x[1], x[2],length=n.points+2)[-c(1,n.points+2)]))
+  par.values <- data.frame(apply(par.ranges, 1, function(x) {
+    seq(as.numeric(x[2]), as.numeric(x[3]),
+               length=n.points+2)[-c(1,n.points+2)]
+  }))
+  
   par.grid <- expand.grid(par.values)
   
   if (any(grid.pars != 'all')) {
-    non.grid.pars <- t(as.matrix(apply(jaatha:::dm.getParRanges(dm)[!grid.pars.mask,], 1, mean)))
+    non.grid.pars <- t(as.matrix(apply(get_parameter_table(dm)[!grid.pars.mask,], 1, function(x) {
+      mean(as.numeric(x[2:3]))
+    })))
     par.grid = cbind(par.grid, non.grid.pars)
-    par.grid = par.grid[,row.names(jaatha:::dm.getParRanges(dm))]
   }
   
   par.grid <- apply(par.grid, 2, rep, reps)
-  return(par.grid)
+  colnames(par.grid) <- get_parameter_table(dm)[,1]
+  par.grid
 }
