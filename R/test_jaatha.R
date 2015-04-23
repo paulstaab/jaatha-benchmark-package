@@ -17,7 +17,7 @@
 #' @export
 #' @examples
 #' library('jaatha')
-#' dm <- coalsimr:::model_theta_tau()
+#' dm <- coala:::model_theta_tau()
 #' testJaatha(dm, 2, 1, cores=c(2,1), folder=tempfile(), scaling.factor=10)
 #' 
 #' test_data <- createTestData(dm, 2, 1, grid.pars=2)
@@ -127,7 +127,7 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
 #' @export
 #' @examples
 #' library('jaatha')
-#' dm <- coalsimr:::model_theta_tau()
+#' dm <- coala:::model_theta_tau()
 #' test_data <- createTestData(dm, 2, 2)
 createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
   test_data <- list()
@@ -149,9 +149,9 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
 
 #' Create a parameter grid
 #' 
-#' @importFrom coalsimr get_parameter_table sumstat_seg_sites
+#' @importFrom coala get_parameter_table sumstat_seg_sites
 #' @examples
-#' dm <- coalsimr:::model_theta_tau()
+#' dm <- coala:::model_theta_tau()
 #' test_data <- createTestData(dm, 2, 1)
 #' test_data <- createTestData(dm, 2, 1, grid.pars=1)
 #' test_data <- createTestData(dm, 2, 1, grid.pars=2)
