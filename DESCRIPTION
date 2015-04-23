@@ -12,6 +12,6 @@ Imports:
     doMC,
     parallel,
     jaatha (>= 2.99.0.9018),
-    coalsimr
+    coala
 Depends:
     R (>= 3.1.0)
