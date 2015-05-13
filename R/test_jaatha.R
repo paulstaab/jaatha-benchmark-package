@@ -18,7 +18,7 @@
 #' @examples
 #' library('jaatha')
 #' dm <- coala:::model_theta_tau()
-#' testJaatha(dm, 2, 1, cores=c(2,1), folder=tempfile(), scaling.factor=10)
+#' testJaatha(dm, 2, 1, cores=c(2,1), folder=tempfile(), scaling_factor=10)
 #' 
 #' test_data <- createTestData(dm, 2, 1, grid.pars=2)
 #' testJaatha(dm, test_data = test_data, cores=c(1,1), folder=tempfile())
