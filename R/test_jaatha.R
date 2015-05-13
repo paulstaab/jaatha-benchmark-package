@@ -71,8 +71,8 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
   results <- foreach(i=1:n, .combine=rbind, .options.multicore=mc.opt) %dopar% { 
     cat("Run", i, "of", n, "\n")
     log <- file(paste(folder.logs, "/run_", i, ".txt", sep=""))
-    #sink(log)
-    #sink(log, type = "message")
+    sink(log)
+    sink(log, type = "message")
     set.seed(seeds[i])
     cat("----------------------------------------------------------------------\n")
     cat("Run", i, "of" , n, "\n")
@@ -116,7 +116,6 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
     res
   }
   
-  print(results)
   estimates <- results[, -(1:6)]
   runtimes <- results[, 1:6]
   
