@@ -14,6 +14,7 @@
 #' @return Nothing.
 #' @importFrom jaatha Jaatha.initialize Jaatha.initialSearch 
 #' @importFrom jaatha Jaatha.refinedSearch Jaatha.getLikelihoods
+#' @importFrom evaluate try_capture_stack
 #' @export
 #' @examples
 #' library('jaatha')
@@ -46,6 +47,12 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
     save(test_data, file = paste(folder.results, 'test_datasets.Rda' , sep="/"))
   }
   
+  faulty <- vapply(test_data$data, inherits, logical(1), what = "simpleError")
+  if (any(faulty)) {
+    print(test_data$data[faulty])
+    stop("Error in test data")
+  }
+  
   # Sample seeds for each run
   set.seed(seed)
   seeds <- sample.int(2^20, nrow(test_data$par_grid))
@@ -62,22 +69,21 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
   n <- nrow(test_data$par_grid)
   # The actual simulation
   results <- foreach(i=1:n, .combine=rbind, .options.multicore=mc.opt) %dopar% { 
-                       
-    cat("Run",i,"of",n,"\n")
+    cat("Run", i, "of", n, "\n")
     log <- file(paste(folder.logs, "/run_", i, ".txt", sep=""))
-    sink(log)
-    sink(log, type = "message")
+    #sink(log)
+    #sink(log, type = "message")
     set.seed(seeds[i])
     cat("----------------------------------------------------------------------\n")
-    cat("Run",i,"of",n,"\n")
-    cat("Real parameters:",test_data$par_grid[i,],"\n")
+    cat("Run", i, "of" , n, "\n")
+    cat("Real parameters:", test_data$par_grid[i,], "\n")
     cat("----------------------------------------------------------------------\n")
-    tryCatch({
+    res <- try_capture_stack({
       jaatha <- Jaatha.initialize(data = test_data$data[[i]], 
                                   model = dm,
                                   cores = cores[2],
                                   ...)
-      save(jaatha, file=paste(folder.logs, "/run_", i, ".Rda", sep=""))
+      save(jaatha, file = paste(folder.logs, "/run_", i, ".Rda", sep=""))
       
       runtimes <- rep(0, 6)
       names(runtimes) <-
@@ -86,7 +92,7 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
       runtimes[1:3] <- system.time(
         jaatha <- Jaatha.initialSearch(jaatha)
       )
-      save(jaatha, file=paste(folder.logs, "/run_", i, ".Rda", sep=""))
+      save(jaatha, file = paste(folder.logs, "/run_", i, ".Rda", sep=""))
       
       runtimes[4:6] <- system.time(
         jaatha <- Jaatha.refinedSearch(jaatha, 2)
@@ -95,18 +101,22 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
       estimates <-  Jaatha.getLikelihoods(jaatha)[1,-(1:2)]
       sink(NULL)
       sink(NULL)
-      return(c(runtimes, estimates))
-    }, error = function(e) {
-      cat("Error:", e$message,
-          file=paste(folder.logs, "/run_", i, ".txt", sep=""), append=TRUE)
+      c(runtimes, estimates)
+    }, new.env())
+    
+    if (inherits(res, "simpleError")) {
+      cat("Error:", res$message, "\n")
+      print(res$call)
       sink(NULL)
       sink(NULL)
-      cat("Run", i, " ERROR:", e$msg, "\n")
-      print(e)
-      return(NA)
-    })
+      cat("Run", i, " Error:", res$message, "\n")
+      return(rep(NA, ncol(test_data$par_grid) + 6))
+    }
+    
+    res
   }
   
+  print(results)
   estimates <- results[, -(1:6)]
   runtimes <- results[, 1:6]
   
@@ -140,8 +150,10 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
   # Simulate test data sets
   seeds <- sample(10000000, nrow(test_data$par_grid))
   test_data$data <- mclapply(1:nrow(test_data$par_grid), function(x) {
-    set.seed(seeds[x])
-    simulate(dm, pars = test_data$par_grid[x,])
+    try_capture_stack({
+      set.seed(seeds[x])
+      simulate(dm, pars = test_data$par_grid[x,])
+    }, new.env())
   }, mc.cores=cores, mc.preschedule=FALSE, mc.set.seed=FALSE)
 
   test_data
