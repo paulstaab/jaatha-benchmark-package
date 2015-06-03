@@ -138,13 +138,18 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
 #' library('jaatha')
 #' dm <- coala:::model_theta_tau()
 #' test_data <- createTestData(dm, 2, 2)
-createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
+createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2,
+                           grid.values = NULL) {
+  
+  stopifnot(is.null(grid.values) || is.data.frame(grid.values))
+  stopifnot(is.null(grid.values) || length(grid.pars) == ncol(grid.values))
+  
   test_data <- list()
   
   dm <- dm + sumstat_seg_sites()
   
   # Create the parameter grid for true values
-  test_data$par_grid <- createParGrid(dm, n.points, reps, grid.pars)
+  test_data$par_grid <- createParGrid(dm, n.points, reps, grid.pars, grid.values)
   
   # Simulate test data sets
   seeds <- sample(10000000, nrow(test_data$par_grid))
@@ -163,11 +168,13 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2) {
 #' @importFrom coala get_parameter_table sumstat_seg_sites
 #' @examples
 #' dm <- coala:::model_theta_tau()
-#' test_data <- createTestData(dm, 2, 1)
-#' test_data <- createTestData(dm, 2, 1, grid.pars=1)
-#' test_data <- createTestData(dm, 2, 1, grid.pars=2)
-#' test_data <- createTestData(dm, 2, 1, grid.pars=1:2)
-createParGrid <- function(dm, n.points, reps, grid.pars='all'){
+#' testJaatha:::createParGrid(dm, 2, 1)
+#' testJaatha:::createParGrid(dm, 2, 1, grid.pars=1)
+#' testJaatha:::createParGrid(dm, 2, 1, grid.pars=2)
+#' testJaatha:::createParGrid(dm, 2, 1, grid.pars=1:2)
+#' testJaatha:::createParGrid(dm, 2, 1, grid.pars=1, 
+#'                            grid.values = data.frame(tau = 1:3))
+createParGrid <- function(dm, n.points, reps, grid.pars='all', grid.values = NULL){
   par.ranges <- get_parameter_table(dm)[,2:3]
   rownames(par.ranges)  <- get_parameter_table(dm)[,1]
   n.dim <- nrow(par.ranges)
@@ -178,9 +185,13 @@ createParGrid <- function(dm, n.points, reps, grid.pars='all'){
     grid.par.mask = rep(TRUE, n.dim)
   }
   
-  par.values <- data.frame(apply(par.ranges[grid.par.mask, , drop=FALSE], 1, function(x) {
-    seq(x[1], x[2], length=n.points+2)[-c(1,n.points+2)]
-  }))
+  if (!is.null(grid.values)) {
+    par.values <- grid.values
+  } else {
+    par.values <- data.frame(apply(par.ranges[grid.par.mask, , drop=FALSE], 1, function(x) {
+      seq(x[1], x[2], length=n.points+2)[-c(1,n.points+2)]
+    }))
+  }
 
   # Create the grid
   par.grid <- expand.grid(par.values)
