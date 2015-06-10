@@ -141,9 +141,6 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
 createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2,
                            grid.values = NULL) {
   
-  stopifnot(is.null(grid.values) || is.data.frame(grid.values))
-  stopifnot(is.null(grid.values) || length(grid.pars) == ncol(grid.values))
-  
   test_data <- list()
   
   dm <- dm + sumstat_seg_sites()

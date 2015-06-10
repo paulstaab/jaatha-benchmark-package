@@ -1,8 +1,8 @@
 Package: testJaatha
 Type: Package
 Title: test_scripts for Jaatha
-Version: 0.1.25
-Date: 2015-05-13
+Version: 0.1.26
+Date: 2015-06-10
 Author: Paul R. Staab <staab@bio.lmu.de>
 Maintainer: Paul R. Staab <staab@bio.lmu.de>
 Description: Test scripts for package jaatha
