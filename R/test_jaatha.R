@@ -19,32 +19,31 @@
 #' @examples
 #' library('jaatha')
 #' dm <- coala:::model_theta_tau()
-#' testJaatha(dm, 2, 1, cores=c(2,1), folder=tempfile(), scaling_factor=10)
+#' testJaatha(dm, 2, 1, folder = tempfile(), scaling_factor=10)
 #' 
 #' test_data <- createTestData(dm, 2, 1, grid.pars=2)
-#' testJaatha(dm, test_data = test_data, cores=c(1,1), folder=tempfile())
-#' 
-testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2), 
+#' testJaatha(dm, test_data = test_data, folder=tempfile())
+testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(), 
                        folder=".", grid.pars='all', test_data=NULL, ...) {
   
   # Setup parallization backend
-  mc.opt <- list(preschedule=FALSE, set.seed=FALSE)
+  mc.opt <- list(preschedule = FALSE, set.seed = FALSE)
   registerDoMC(cores[1])
   
   # Set up directories
-  folder.results <- paste(folder, "results", sep="/")
-  folder.logs  <- paste(folder, "logs", sep="/")
+  folder.results <- file.path(folder, "results")
+  folder.logs  <- file.path(folder, "logs")
   if ( file.exists(folder.results) || file.exists(folder.logs) ) {
     stop("Folders already exists")
   }
-  dir.create(folder.results, recursive=T)
-  dir.create(folder.logs, recursive=T)
+  dir.create(folder.results, recursive = TRUE)
+  dir.create(folder.logs, recursive = TRUE)
   
   # Create test data sets if not provided
   if (is.null(test_data)) {
-    set.seed(seed+1)
+    set.seed(seed + 1)
     test_data <- createTestData(dm, n.points, reps, grid.pars, cores = prod(cores))
-    save(test_data, file = paste(folder.results, 'test_datasets.Rda' , sep="/"))
+    save(test_data, file = file.path(folder.results, 'test_datasets.Rda'))
   }
   
   faulty <- vapply(test_data$data, inherits, logical(1), what = "simpleError")
@@ -55,22 +54,22 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
   
   # Sample seeds for each run
   set.seed(seed)
-  seeds <- sample.int(2^20, nrow(test_data$par_grid))
+  seeds <- sample.int(2 ^ 20, nrow(test_data$par_grid))
   
   # Write some information about this run to disk
-  envir <- c(folder=folder,
-             jaatha.version=as.character(packageVersion("jaatha")),
-             test_jaatha.version=as.character(packageVersion("testJaatha")),
-             hostname=Sys.info()["nodename"],
-             seed=seed)
+  envir <- c(folder = folder,
+             jaatha.version = as.character(packageVersion("jaatha")),
+             test_jaatha.version = as.character(packageVersion("testJaatha")),
+             hostname = Sys.info()["nodename"],
+             seed = seed)
   print(envir)
-  write.table(envir, file=paste0(folder.logs, "/envir.txt"), col.names=F)
+  write.table(envir, file = paste0(folder.logs, "/envir.txt"), col.names = FALSE)
   
   n <- nrow(test_data$par_grid)
   # The actual simulation
-  results <- foreach(i=1:n, .combine=rbind, .options.multicore=mc.opt) %dopar% { 
+  results <- foreach(i = 1:n, .combine = rbind, .options.multicore = mc.opt) %dopar% { 
     cat("Run", i, "of", n, "\n")
-    log <- file(paste(folder.logs, "/run_", i, ".txt", sep=""))
+    log <- file(file.path(folder.logs, paste0("run_", i, ".txt")))
     sink(log)
     sink(log, type = "message")
     set.seed(seeds[i])
@@ -83,7 +82,7 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
                                   model = dm,
                                   cores = cores[2],
                                   ...)
-      save(jaatha, file = paste(folder.logs, "/run_", i, ".Rda", sep=""))
+      save(jaatha, file = file.path(folder.logs, paste0("run_", i, ".Rda")))
       
       runtimes <- rep(0, 6)
       names(runtimes) <-
@@ -92,12 +91,12 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
       runtimes[1:3] <- system.time(
         jaatha <- Jaatha.initialSearch(jaatha)
       )
-      save(jaatha, file = paste(folder.logs, "/run_", i, ".Rda", sep=""))
+      save(jaatha, file = file.path(folder.logs, paste0("run_", i, ".Rda")))
       
       runtimes[4:6] <- system.time(
         jaatha <- Jaatha.refinedSearch(jaatha, 2)
       )
-      save(jaatha, file=paste(folder.logs, "/run_", i, ".Rda", sep=""))
+      save(jaatha, file = file.path(folder.logs, paste0("run_", i, ".Rda")))
       estimates <-  Jaatha.getLikelihoods(jaatha)[1,-(1:2)]
       sink(NULL)
       sink(NULL)
@@ -119,9 +118,9 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
   estimates <- results[, -(1:6)]
   runtimes <- results[, 1:6]
   
-  write.table(estimates, file=paste(folder.results, "estimates.txt", sep="/"), row.names=F)
-  write.table(test_data$par_grid,  file=paste(folder.results, "true_values.txt", sep="/"), row.names=F)
-  write.table(runtimes,  file=paste(folder.results, "runtimes.txt", sep="/"), row.names=F)
+  write.table(estimates, file = file.path(folder.results, "estimates.txt"), row.names = FALSE)
+  write.table(test_data$par_grid,  file = file.path(folder.results, "true_values.txt"), row.names = FALSE)
+  write.table(runtimes,  file = file.path(folder.results, "runtimes.txt"), row.names = FALSE)
 }
 
 #' Creates test datasets
@@ -138,7 +137,8 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=c(16,2),
 #' library('jaatha')
 #' dm <- coala:::model_theta_tau()
 #' test_data <- createTestData(dm, 2, 2)
-createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2,
+createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', 
+                           cores=prod(detect_cores()),
                            grid.values = NULL) {
   
   test_data <- list()
@@ -155,7 +155,7 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', cores=2,
       set.seed(seeds[x])
       simulate(dm, pars = test_data$par_grid[x,])
     }, new.env())
-  }, mc.cores=cores, mc.preschedule=FALSE, mc.set.seed=FALSE)
+  }, mc.cores = cores, mc.preschedule = FALSE, mc.set.seed = FALSE)
 
   test_data
 }
@@ -185,8 +185,8 @@ createParGrid <- function(dm, n.points, reps, grid.pars='all', grid.values = NUL
   if (!is.null(grid.values)) {
     par.values <- grid.values
   } else {
-    par.values <- data.frame(apply(par.ranges[grid.par.mask, , drop=FALSE], 1, function(x) {
-      seq(x[1], x[2], length=n.points+2)[-c(1,n.points+2)]
+    par.values <- data.frame(apply(par.ranges[grid.par.mask, , drop = FALSE], 1, function(x) {
+      seq(x[1], x[2], length = n.points + 2)[-c(1, n.points + 2)]
     }))
   }
 
