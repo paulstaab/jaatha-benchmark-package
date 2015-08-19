@@ -8,12 +8,11 @@
 #' @param test_data If specified, use the test data generated with 
 #'   \code{\link{createTestData}} instead of generating it in the beginning.
 #'   The arguments \code{n.points} and \code{reps} are ignored then.
-#' @param Additional argument for \code{Jaatha.initialize}.
+#' @param ... Additional argument for \code{jaatha}.
 #' @inheritParams createTestData
 #' 
 #' @return Nothing.
-#' @importFrom jaatha Jaatha.initialize Jaatha.initialSearch 
-#' @importFrom jaatha Jaatha.refinedSearch Jaatha.getLikelihoods
+#' @importFrom jaatha jaatha create_jaatha_model create_jaatha_data
 #' @importFrom evaluate try_capture_stack
 #' @export
 #' @examples
@@ -67,6 +66,7 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
   
   n <- nrow(test_data$par_grid)
   # The actual simulation
+  i <- 0
   results <- foreach(i = 1:n, .combine = rbind, .options.multicore = mc.opt) %dopar% { 
     cat("Run", i, "of", n, "\n")
     log <- file(file.path(folder.logs, paste0("run_", i, ".txt")))
@@ -78,26 +78,20 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
     cat("Real parameters:", test_data$par_grid[i,], "\n")
     cat("----------------------------------------------------------------------\n")
     res <- try_capture_stack({
-      jaatha <- Jaatha.initialize(data = test_data$data[[i]], 
-                                  model = dm,
-                                  cores = cores[2],
-                                  ...)
-      save(jaatha, file = file.path(folder.logs, paste0("run_", i, ".Rda")))
+      jaatha_model <- create_jaatha_model(dm)
+      jaatha_data <- create_jaatha_data(test_data$data[[i]], jaatha_model)
+      save(jaatha_model, jaatha_data,
+           file = file.path(folder.logs, paste0("run_", i, "_setup.Rda")))
       
-      runtimes <- rep(0, 6)
-      names(runtimes) <-
-        c('init.user','init.system','init.elapsed','ref.user','ref.system','ref.elapsed')
-      
-      runtimes[1:3] <- system.time(
-        jaatha <- Jaatha.initialSearch(jaatha)
+      runtimes <- system.time(
+        result <- jaatha(jaatha_model, jaatha_data, 
+                          repetitions = 2, 
+                          cores = cores[2],
+                          ...)
       )
-      save(jaatha, file = file.path(folder.logs, paste0("run_", i, ".Rda")))
-      
-      runtimes[4:6] <- system.time(
-        jaatha <- Jaatha.refinedSearch(jaatha, 2)
-      )
-      save(jaatha, file = file.path(folder.logs, paste0("run_", i, ".Rda")))
-      estimates <-  Jaatha.getLikelihoods(jaatha)[1,-(1:2)]
+      save(results, 
+           file = file.path(folder.logs, paste0("run_", i, "_result.Rda")))
+      estimates <- results$param
       sink(NULL)
       sink(NULL)
       c(runtimes, estimates)
@@ -115,13 +109,14 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
     res
   }
   
-  estimates <- results[, -(1:6)]
-  runtimes <- results[, 1:6]
+  estimates <- results[, -(1:5)]
+  runtimes <- results[, 1:5]
   
   write.table(estimates, file = file.path(folder.results, "estimates.txt"), row.names = FALSE)
   write.table(test_data$par_grid,  file = file.path(folder.results, "true_values.txt"), row.names = FALSE)
   write.table(runtimes,  file = file.path(folder.results, "runtimes.txt"), row.names = FALSE)
 }
+
 
 #' Creates test datasets
 #' 
@@ -131,6 +126,7 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
 #' @param grid.pars The index of parameter that are used for builing the grid
 #'   of true values. Use 'all' (default) for all parameters.
 #' @param cores The number of cores on which the simulations are distributed.
+#' @param grid.values The values that are used for the parameters. A named list.
 #' 
 #' @export
 #' @examples
@@ -142,8 +138,6 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all',
                            grid.values = NULL) {
   
   test_data <- list()
-  
-  dm <- dm + sumstat_seg_sites()
   
   # Create the parameter grid for true values
   test_data$par_grid <- createParGrid(dm, n.points, reps, grid.pars, grid.values)
@@ -162,7 +156,8 @@ createTestData <- function(dm, n.points=2, reps=1, grid.pars='all',
 
 #' Create a parameter grid
 #' 
-#' @importFrom coala get_parameter_table sumstat_seg_sites
+#' @importFrom coala get_parameter_table
+#' @inheritParams createTestData
 #' @examples
 #' dm <- coala:::model_theta_tau()
 #' testJaatha:::createParGrid(dm, 2, 1)

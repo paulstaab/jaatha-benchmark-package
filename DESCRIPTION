@@ -1,18 +1,18 @@
 Package: testJaatha
 Type: Package
 Title: test_scripts for Jaatha
-Version: 0.1.27
-Date: 2015-06-12
+Version: 0.2.0
+Date: 2015-08-19
 Author: Paul R. Staab <staab@bio.lmu.de>
 Maintainer: Paul R. Staab <staab@bio.lmu.de>
-Description: Test scripts for package jaatha
+Description: Test scripts for package 'jaatha'.
 License: GPL(>=3)
 Imports:
     foreach,
     doMC,
     parallel,
-    jaatha (>= 2.99.0.9030),
-    coala (>= 0.0.9102),
+    jaatha (>= 2.99.0.9200),
+    coala (>= 0.1.1),
     evaluate (>= 0.7)
 Depends:
     R (>= 3.1.0)
