@@ -37,6 +37,9 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
   }
   dir.create(folder.results, recursive = TRUE)
   dir.create(folder.logs, recursive = TRUE)
+  if ( !(file.exists(folder.results) && file.exists(folder.logs)) ) {
+    stop("Failed to create folders")
+  }
   
   # Create test data sets if not provided
   if (is.null(test_data)) {
@@ -89,9 +92,7 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
                           cores = cores[2],
                           ...)
       )
-      save(results, 
-           file = file.path(folder.logs, paste0("run_", i, "_result.Rda")))
-      estimates <- results$param
+      estimates <- result$param
       sink(NULL)
       sink(NULL)
       c(runtimes, estimates)
@@ -112,9 +113,9 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
   estimates <- results[, -(1:5)]
   runtimes <- results[, 1:5]
   
-  write.table(estimates, file = file.path(folder.results, "estimates.txt"), row.names = FALSE)
-  write.table(test_data$par_grid,  file = file.path(folder.results, "true_values.txt"), row.names = FALSE)
-  write.table(runtimes,  file = file.path(folder.results, "runtimes.txt"), row.names = FALSE)
+  write.table(estimates, file = paste0(folder.results, "/estimates.txt"), row.names = FALSE)
+  write.table(test_data$par_grid,  file = paste0(folder.results, "/true_values.txt"), row.names = FALSE)
+  write.table(runtimes,  file = paste0(folder.results, "/runtimes.txt"), row.names = FALSE)
 }
 
 
