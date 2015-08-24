@@ -75,22 +75,24 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
     log <- file(file.path(folder.logs, paste0("run_", i, ".txt")))
     sink(log)
     sink(log, type = "message")
-    set.seed(seeds[i])
+    seed <- seeds[i]
+
     cat("----------------------------------------------------------------------\n")
     cat("Run", i, "of" , n, "\n")
     cat("Real parameters:", test_data$par_grid[i,], "\n")
+    cat("Seed:", seed, "\n")
     cat("----------------------------------------------------------------------\n")
     res <- try_capture_stack({
       jaatha_model <- create_jaatha_model(dm)
       jaatha_data <- create_jaatha_data(test_data$data[[i]], jaatha_model)
-      save(jaatha_model, jaatha_data,
+      reps <- 2
+      save(jaatha_model, jaatha_data, seed, reps,
            file = file.path(folder.logs, paste0("run_", i, "_setup.Rda")))
       
+      set.seed(seed)
       runtimes <- system.time(
         result <- jaatha(jaatha_model, jaatha_data, 
-                          repetitions = 2, 
-                          cores = cores[2],
-                          ...)
+                         repetitions = 2, cores = cores[2], ...)
       )
       estimates <- result$param
       sink(NULL)
