@@ -94,6 +94,9 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
         result <- jaatha(jaatha_model, jaatha_data, 
                          repetitions = 2, cores = cores[2], ...)
       )
+      
+      save(result, runtimes,
+           file = file.path(folder.logs, paste0("run_", i, "_result.Rda")))
       estimates <- result$param
       sink(NULL)
       sink(NULL)
