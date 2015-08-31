@@ -109,7 +109,7 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
       sink(NULL)
       sink(NULL)
       cat("Run", i, " Error:", res$message, "\n")
-      return(rep(NA, ncol(test_data$par_grid) + 6))
+      return(rep(NA, ncol(jaatha_model$get_par_number()) + 5))
     }
     
     res
