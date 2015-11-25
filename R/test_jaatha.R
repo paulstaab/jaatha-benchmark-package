@@ -105,11 +105,12 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
     
     if (inherits(res, "simpleError")) {
       cat("Error:", res$message, "\n")
+      print(res)
       print(res$call)
       sink(NULL)
       sink(NULL)
       cat("Run", i, " Error:", res$message, "\n")
-      return(rep(NA, ncol(jaatha_model$get_par_number()) + 5))
+      return(rep(NA, ncol(test_data$par_grid) + 5))
     }
     
     res
@@ -138,7 +139,12 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
 #' @examples
 #' library('jaatha')
 #' dm <- coala:::model_theta_tau()
+#' set.seed(17)
 #' test_data <- createTestData(dm, 2, 2)
+#' 
+#' set.seed(17)
+#' test_data_2 <- createTestData(dm, 2, 2)
+#' stopifnot(identical(test_data, test_data_2))
 createTestData <- function(dm, n.points=2, reps=1, grid.pars='all', 
                            cores=prod(detect_cores()),
                            grid.values = NULL) {
