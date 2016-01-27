@@ -32,11 +32,9 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
   # Set up directories
   folder.results <- file.path(folder, "results")
   folder.logs  <- file.path(folder, "logs")
-  if ( file.exists(folder.results) || file.exists(folder.logs) ) {
-    stop("Folders already exists")
-  }
-  dir.create(folder.results, recursive = TRUE)
-  dir.create(folder.logs, recursive = TRUE)
+
+  dir.create(folder.results, showWarnings = FALSE, recursive = TRUE)
+  dir.create(folder.logs, showWarnings = FALSE, recursive = TRUE)
   if ( !(file.exists(folder.results) && file.exists(folder.logs)) ) {
     stop("Failed to create folders")
   }
@@ -70,7 +68,13 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
   n <- nrow(test_data$par_grid)
   # The actual simulation
   i <- 0
-  results <- foreach(i = 1:n, .combine = rbind, .options.multicore = mc.opt) %dopar% { 
+  results <- foreach(i = 1:n, .combine = rbind, .options.multicore = mc.opt) %dopar% {
+    result_file <- file.path(folder.logs, paste0("run_", i, "_result.Rda"))
+    if (file.exists(result_file)) {
+      cat("Run", i, "of", n, "- Results already exist. Skipping.\n")
+      load(result_file)
+      return(c(runtimes, result$estimate))
+    }
     cat("Run", i, "of", n, "\n")
     log <- file(file.path(folder.logs, paste0("run_", i, ".txt")))
     sink(log)
@@ -97,10 +101,9 @@ testJaatha <- function(dm, n.points=2, reps=1, seed=12523, cores=detect_cores(),
       
       save(result, runtimes,
            file = file.path(folder.logs, paste0("run_", i, "_result.Rda")))
-      estimates <- result$estimate
       sink(NULL)
       sink(NULL)
-      c(runtimes, estimates)
+      c(runtimes, result$estimate)
     }, new.env())
     
     if (inherits(res, "simpleError")) {
